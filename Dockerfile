@@ -12,6 +12,6 @@ RUN go mod download && go mod verify
 COPY main.go main.go
 
 # Build the service
-RUN GOCACHE="/usr/src/service/.cache/go-build" go build -v -o /usr/local/bin/service ./...
+RUN GOCACHE="off" go build -v -o /usr/local/bin/service ./...
 
 ENTRYPOINT ["service"]

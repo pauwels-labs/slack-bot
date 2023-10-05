@@ -21,4 +21,4 @@ ENV COVERAGE_DIRECTORY "."
 RUN mkdir -p "${COVERAGE_DIRECTORY}"
 
 # Test and convert to lcov style report
-ENTRYPOINT GOCACHE="/usr/src/service/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" && gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
+ENTRYPOINT GOCACHE="off" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" && gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
