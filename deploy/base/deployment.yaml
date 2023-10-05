@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "${name}"
+spec:
+  replicas: 1
+  template:
+    spec:
+      serviceAccountName: "${name}"
+      securityContext:
+        fsGroup: 2000
+      containers:
+      - name: main
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10000
+        image: "appimage"
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 256m
+            memory: 256Mi
+          requests:
+            cpu: 256m
+            memory: 256Mi
+        env:
+        - name: APPCFG_meta_env
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['env']
+        - name: APPCFG_meta_namespace
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: APPCFG_meta_pod_name
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: APPCFG_meta_name
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['app.kubernetes.io/name']
+        - name: APPCFG_meta_version
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: APPCFG_otlp_url
+          value: "http://grafana-agent-flow.i-grafana-agent-flow.svc.cluster.local:9095"
+        - name: APPCFG_otlp_protocol
+          value: "grpc"
+        envFrom:
+        - secretRef:
+            name: "env-${name}"
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9080
+          name: metrics
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/${name}/config"
+      volumes:
+      - name: config
+        secret:
+          secretName: "config-${name}"

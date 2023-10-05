@@ -1,0 +1,14 @@
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: "${name}"
+spec:
+  jwtRules:
+  - issuer: "https://identity.pauwelslabs.com/realms/pauwels-labs-main"
+    jwksUri: https://identity.pauwelslabs.com/realms/pauwels-labs-main/protocol/openid-connect/certs
+    forwardOriginalToken: true
+    fromHeaders:
+    - name: "x-forwarded-id-token"
+  selector:
+    matchLabels:
+      app: "${name}"

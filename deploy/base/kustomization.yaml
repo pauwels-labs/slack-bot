@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: "${namesuffix}"
+commonLabels:
+  app: "${name}${namesuffix}"
+  app.kubernetes.io/name: "${name}${namesuffix}"
+  toolkit.fluxcd.io/tenant: "${tenantname}"
+labels:
+- pairs:
+    version: "${version}"
+    app.kubernetes.io/version: "${version}"
+  includeTemplates: true
+resources:
+- deployment.yaml
+- externalsecret-config.yaml
+- externalsecret-env.yaml
+- secretstore.yaml
+- serviceaccount.yaml
+- service.yaml
+- virtualservice.yaml
+- authorizationpolicy.yaml
+- requestauthentication.yaml

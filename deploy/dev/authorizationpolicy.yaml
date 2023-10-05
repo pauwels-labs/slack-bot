@@ -1,0 +1,12 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: "${name}"
+spec:
+  rules:
+  - to:
+    - operation:
+        hosts:
+        - "dev.${domain}"
+        paths:
+        - "/secure"
