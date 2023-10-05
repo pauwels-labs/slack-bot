@@ -11,7 +11,10 @@ RUN go mod download && go mod verify
 # Copy in source files
 COPY main.go main.go
 
+# Disable go caching
+ENV GOCACHE "off"
+
 # Build the service
-RUN GOCACHE="off" go build -v -o /usr/local/bin/service ./...
+RUN go build -v -o /usr/local/bin/service ./...
 
 ENTRYPOINT ["service"]
