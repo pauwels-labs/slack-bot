@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	viperpit "github.com/ajpauwels/pit-of-vipers"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"os"
 )
 
 type SlackConfig struct {
@@ -103,13 +105,30 @@ func main() {
 	}
 	defer logger.Sync()
 
-	// Load configuration
-	vpCh, errCh := viperpit.NewFromPathsAndName([]string{"./config"}, "base")
+	// Load env-specific configuration
+	env := os.Getenv("APPCFG_meta_env")
+	configPath := "./config"
+	if len(env) <= 0 {
+		env = "local"
+	}
+	if env != "local" {
+		configPath = "/etc/slack-bot/config"
+	}
+
+	// Create viper instances for base and env-specific config files
+	baseViper := viper.New()
+	baseViper.AddConfigPath(configPath)
+	baseViper.SetConfigName("base")
+	envViper := viper.New()
+	envViper.AddConfigPath(configPath)
+	envViper.SetConfigName(env)
+
+	vpCh, errCh := viperpit.New([]*viper.Viper{baseViper, envViper})
 	for {
 		select {
 		case vp := <-vpCh:
 			// Workaround to add ENV prefix and be able to unmarshal env-provided values
-			vp.SetEnvPrefix("SERVICE")
+			vp.SetEnvPrefix("APPCFG")
 			vp.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 			for _, key := range vp.AllKeys() {
 				val := vp.Get(key)
