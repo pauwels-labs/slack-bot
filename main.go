@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +15,7 @@ import (
 	"strings"
 
 	viperpit "github.com/ajpauwels/pit-of-vipers"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -26,15 +29,90 @@ type Config struct {
 	Slack SlackConfig `mapstructure:"slack"`
 }
 
+type SlackSlashCommandBody struct {
+	Command     string `mapstructure:"command,omitempty"`
+	Text        string `mapstructure:"text,omitempty"`
+	ResponseURL string `mapstructure:"response_url,omitempty"`
+	TriggerID   string `mapstructure:"trigger_id,omitempty"`
+	UserID      string `mapstructure:"user_id,omitempty"`
+	APIAppID    string `mapstructure:"api_add_id,omitempty"`
+	SSLCheck    string `mapstructure:"ssl_check,omitempty"`
+}
+
+type SlackResponse struct {
+	ResponseType string `mapstructure:"response_type"`
+	Text         string `mapstructure:"text"`
+}
+
+func RespondWithError(requestURL string, errText string) error {
+	// Create request
+	requestBody := SlackResponse{
+		ResponseType: "ephemeral",
+		Text:         errText,
+	}
+	requestString, err := json.Marshal(requestBody)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestString))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("content-type", "application/json; charset=utf-8")
+
+	// Execute request
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+func RespondWithHelp(requestURL string) error {
+	helpText := "This command currently has no features :("
+
+	// Create request
+	requestBody := SlackResponse{
+		ResponseType: "ephemeral",
+		Text:         helpText,
+	}
+	requestString, err := json.Marshal(requestBody)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestString))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("content-type", "application/json; charset=utf-8")
+
+	// Execute request
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
 func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Ensure the request uses the POST method
 		method := r.Method
 		if method != "POST" {
 			logger.Error("incorrect request method", zap.String("method", method))
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			io.WriteString(w, "error: must be a POST request")
+			return
+		}
+
+		// Ensure the request uses the application/x-www-form-urlencoded content-type
+		contentType := r.Header.Get("content-type")
+		if contentType != "application/x-www-form-urlencoded" {
+			logger.Error("incorrect content-type", zap.String("contentType", contentType))
 			return
 		}
 
@@ -42,9 +120,6 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		signatureHeader := r.Header.Get("x-slack-signature")
 		if len(signatureHeader) == 0 {
 			logger.Error("missing request x-slack-signature-header")
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "error: must include the x-slack-signature header")
 			return
 		}
 
@@ -52,19 +127,13 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		timestampHeader := []byte(r.Header.Get("x-slack-request-timestamp"))
 		if len(timestampHeader) == 0 {
 			logger.Error("missing request x-slack-request-timestamp header")
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "error: must include the x-slack-request-timestamp header")
 			return
 		}
 
-		// Parse the form body as a string
+		// Generate a string of the request body
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("unable to parse request body", zap.Error(err))
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, "error: unable to read request body")
 			return
 		}
 
@@ -74,9 +143,6 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		bytesWritten, err := mac.Write([]byte(baseString))
 		if err != nil {
 			logger.Error("unable to compute request signature", zap.Error(err), zap.Int("bytesWritten", bytesWritten))
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, "error: unable to compute request signature")
 			return
 		}
 		signatureComputed := mac.Sum(nil)
@@ -86,15 +152,51 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		// Compare the generated signature with the provided signature
 		if signatureComputedFormatted != signatureHeader {
 			logger.Error("computed signature and provided signature do not match", zap.String("computed", signatureComputedFormatted), zap.String("provided", signatureHeader))
-			w.Header().Set("content-type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, "error: computed signature and provided signature do not match")
 			return
 		}
 
-		w.Header().Set("content-type", "text/plain; charset=utf-8")
+		// Place the body string back in the request so we can parse individual form fields
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+		// Decode the body into a struct
+		err = r.ParseForm()
+		if err != nil {
+			logger.Error("unable to parse form values", zap.Error(err))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		undecodedForm := map[string]string{}
+		for key, element := range r.Form {
+			undecodedForm[key] = element[0]
+		}
+		var slashCommandBody SlackSlashCommandBody
+		err = mapstructure.Decode(undecodedForm, &slashCommandBody)
+		if err != nil {
+			logger.Error("unable to decode form values into struct", zap.Error(err))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// If this is an SSL certificate verification, immediately return 200
+		if slashCommandBody.SSLCheck == "1" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Post help as an ephemeral message
+		if slashCommandBody.Command[0:4] == "help" {
+			w.WriteHeader(http.StatusOK)
+			err = RespondWithHelp(slashCommandBody.ResponseURL)
+			if err != nil {
+				logger.Error("could not respond to help command", zap.Error(err))
+				err = RespondWithError(slashCommandBody.ResponseURL, "there was an error sending the help text")
+				if err != nil {
+					logger.Error("could not send error message", zap.Error(err))
+				}
+			}
+		}
+
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, "ok")
 	}
 }
 
