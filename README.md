@@ -1,1 +1,1 @@
-# template-golang-http
+# slack-bot

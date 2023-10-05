@@ -1,4 +1,4 @@
-module github.com/pauwels-labs/template-golang-http
+module github.com/pauwels-labs/slack-bot
 
 go 1.21.1
 
