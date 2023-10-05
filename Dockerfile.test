@@ -17,5 +17,8 @@ RUN go install github.com/jandelgado/gcov2lcov@v1.0.6
 # By default, coverage is outputted in the same directory
 ENV COVERAGE_DIRECTORY "."
 
+# Create the coverage directory if it doesn't exist yet
+RUN mkdir -p "${COVERAGE_DIRECTORY}"
+
 # Test and convert to lcov style report
-ENTRYPOINT GOCACHE=off go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" && gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
+ENTRYPOINT GOCACHE="/usr/src/service/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" && gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
