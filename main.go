@@ -3,17 +3,18 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	viperpit "github.com/ajpauwels/pit-of-vipers"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"os"
 )
 
 type SlackConfig struct {
@@ -27,8 +28,6 @@ type Config struct {
 
 func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger.Info("handling http request", zap.String("path", r.URL.Path))
-
 		// Ensure the request uses the POST method
 		method := r.Method
 		if method != "POST" {
@@ -40,7 +39,7 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		}
 
 		// Ensure the request includes a signature header
-		signatureHeader := []byte(r.Header.Get("x-slack-signature"))
+		signatureHeader := r.Header.Get("x-slack-signature")
 		if len(signatureHeader) == 0 {
 			logger.Error("missing request x-slack-signature-header")
 			w.Header().Set("content-type", "text/plain; charset=utf-8")
@@ -81,10 +80,12 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 			return
 		}
 		signatureComputed := mac.Sum(nil)
+		signatureComputedHex := hex.EncodeToString(signatureComputed)
+		signatureComputedFormatted := fmt.Sprintf("v0=%s", signatureComputedHex)
 
 		// Compare the generated signature with the provided signature
-		if !hmac.Equal(signatureHeader, signatureComputed) {
-			logger.Error("computed signature and provided signature do not match", zap.String("computed", string(signatureComputed)), zap.String("provided", string(signatureHeader)))
+		if signatureComputedFormatted != signatureHeader {
+			logger.Error("computed signature and provided signature do not match", zap.String("computed", signatureComputedFormatted), zap.String("provided", signatureHeader))
 			w.Header().Set("content-type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
 			io.WriteString(w, "error: computed signature and provided signature do not match")
