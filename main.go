@@ -184,7 +184,7 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		}
 
 		// Post help as an ephemeral message
-		if slashCommandBody.Command[0:4] == "help" {
+		if slashCommandBody.Text[0:4] == "help" {
 			w.WriteHeader(http.StatusOK)
 			err = RespondWithHelp(slashCommandBody.ResponseURL)
 			if err != nil {
