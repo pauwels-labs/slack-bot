@@ -19,3 +19,6 @@ go.work
 
 # executable file
 slack-bot
+
+# dot-env files
+*.env
