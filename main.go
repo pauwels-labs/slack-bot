@@ -40,8 +40,8 @@ type SlackSlashCommandBody struct {
 }
 
 type SlackResponse struct {
-	ResponseType string `mapstructure:"response_type" json:"response_type,omitempty"`
-	Text         string `mapstructure:"text" json:"text,omitempty"`
+	ResponseType string `json:"response_type,omitempty"`
+	Text         string `json:"text,omitempty"`
 }
 
 func RespondWithError(requestURL string, errText string) error {
