@@ -71,7 +71,7 @@ func RespondWithError(requestURL string, errText string) error {
 	return nil
 }
 
-func RespondWithHelp(requestURL string, logger *zap.Logger) error {
+func RespondWithHelp(requestURL string) error {
 	helpText := "This command currently has no features :("
 
 	// Create request
@@ -88,8 +88,6 @@ func RespondWithHelp(requestURL string, logger *zap.Logger) error {
 		return err
 	}
 	request.Header.Set("content-type", "application/json; charset=utf-8")
-
-	logger.Info("sending help response", zap.String("requestURL", requestURL), zap.String("requestString", string(requestString)))
 
 	// Execute request
 	client := &http.Client{}
@@ -188,7 +186,7 @@ func BuildHandler(logger *zap.Logger, config *Config) func(http.ResponseWriter, 
 		// Post help as an ephemeral message
 		if slashCommandBody.Text[0:4] == "help" {
 			w.WriteHeader(http.StatusOK)
-			err = RespondWithHelp(slashCommandBody.ResponseURL, logger)
+			err = RespondWithHelp(slashCommandBody.ResponseURL)
 			if err != nil {
 				logger.Error("could not respond to help command", zap.Error(err))
 				err = RespondWithError(slashCommandBody.ResponseURL, "there was an error sending the help text")
