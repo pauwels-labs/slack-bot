@@ -11,9 +11,6 @@ RUN go mod download && go mod verify
 # Copy in source files
 COPY main.go main.go
 
-# Set caching location to writeable directory
-ENV GOCACHE "/workspace/source/.cache/go-build"
-
 # Build the service
 RUN go build -v -o /usr/local/bin/service ./...
 
