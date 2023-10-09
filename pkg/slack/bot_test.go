@@ -1,4 +1,4 @@
-package main
+package slack
 
 import (
 	"go.uber.org/zap"
@@ -13,13 +13,5 @@ func TestHandlerWithLogger(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	// Create config
-	config := Config{
-		Port: 8080,
-		Slack: SlackConfig{
-			SigningKey: "abc",
-		},
-	}
-
-	_ = BuildHandler(logger, &config)
+	_ = NewSlackBot(8080, "abc", []SlackSlashCommandHandler{})
 }

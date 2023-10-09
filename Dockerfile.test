@@ -12,10 +12,10 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 # Copy in source files
-COPY main.go main_test.go ./
+COPY . .
 
 # By default, coverage is outputted in the same directory
-ENV COVERAGE_DIRECTORY "."
+ENV COVERAGE_DIRECTORY "/usr/src/service"
 
 # Test and convert to lcov style report
-ENTRYPOINT mkdir -p "${COVERAGE_DIRECTORY}/.cache/go-build" && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
+ENTRYPOINT mkdir -p "${COVERAGE_DIRECTORY}/.cache/go-build" && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" ./... && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"

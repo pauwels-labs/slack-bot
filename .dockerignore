@@ -1,0 +1,7 @@
+/deploy
+/Dockerfile
+/Dockerfile.test
+/.git
+/.gitignore
+/README.md
+/slack-bot

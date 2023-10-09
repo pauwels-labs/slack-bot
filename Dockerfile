@@ -9,9 +9,9 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 # Copy in source files
-COPY main.go main.go
+COPY . .
 
 # Build the service
-RUN go build -v -o /usr/local/bin/service ./...
+RUN go build -v -o /usr/local/bin/service ./cmd/...
 
 ENTRYPOINT ["service"]
