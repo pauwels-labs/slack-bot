@@ -59,12 +59,8 @@ func main() {
 
 			logger.Info("config", zap.Uint16("port", config.Port), zap.String("slack.signingkey", string(config.Slack.SigningKey)))
 
-			// Create the list of supported handlers
-			echoHandler := handlers.NewEchoHandler()
-			handlers := []slack.SlackSlashCommandHandler{echoHandler}
-
 			// Create slack bot server
-			slackBot := slack.NewSlackBot(config.Port, config.Slack.SigningKey, handlers)
+			slackBot := slack.NewSlackBot(config.Port, config.Slack.SigningKey, CreateHandlers())
 			logger.Info("starting server", zap.Uint16("port", config.Port))
 			err := slackBot.ListenAndServe(logger)
 
@@ -79,4 +75,9 @@ func main() {
 			logger.Error("error loading config", zap.Error(err))
 		}
 	}
+}
+
+func CreateHandlers() []slack.SlackSlashCommandHandler {
+	echoHandler := handlers.NewEchoHandler()
+	return []slack.SlackSlashCommandHandler{echoHandler}
 }
