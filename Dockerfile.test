@@ -18,4 +18,4 @@ COPY . .
 ENV COVERAGE_DIRECTORY "/usr/src/service"
 
 # Test and convert to lcov style report
-ENTRYPOINT mkdir -p "${COVERAGE_DIRECTORY}/.cache/go-build" && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" ./... && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/coverage.lcov.out"
+ENTRYPOINT mkdir -p "${COVERAGE_DIRECTORY}/.cache/go-build" && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" go test -coverprofile "${COVERAGE_DIRECTORY}/coverage.gcov.out" ./... && GOCACHE="${COVERAGE_DIRECTORY}/.cache/go-build" gcov2lcov -infile "${COVERAGE_DIRECTORY}/coverage.gcov.out" -outfile "${COVERAGE_DIRECTORY}/lcov.info"
