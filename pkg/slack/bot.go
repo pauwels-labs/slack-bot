@@ -11,7 +11,9 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type SlackSlashCommandHandler interface {
@@ -86,6 +88,19 @@ func BuildHandler(logger *zap.Logger, signingKey string, handlers []SlackSlashCo
 		timestampHeader := []byte(r.Header.Get("x-slack-request-timestamp"))
 		if len(timestampHeader) == 0 {
 			logger.Error("missing request x-slack-request-timestamp header")
+			return
+		}
+
+		// Verify that timestamp is within +/- 5 minutes from now to prevent replay attacks
+		timestampHeaderInt, err := strconv.ParseInt(string(timestampHeader), 10, 64)
+		if err != nil {
+			logger.Error("timestamp header could not be converted to a UNIX epoch", zap.Error(err))
+			return
+		}
+		givenTime := time.Unix(timestampHeaderInt, 0)
+		timeDiffInSeconds := time.Since(givenTime).Abs().Seconds()
+		if timeDiffInSeconds > 300 {
+			logger.Error("timestamp header is not within five minutes of current timestamp")
 			return
 		}
 
